@@ -1,0 +1,76 @@
+version: '3'
+
+services:
+
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: pass
+    volumes:
+      - ~/mongodata:/data/db
+      - ~/backups/:/backups/
+    ports:
+      - 27017:27017
+
+  web:
+    image: nginx:1.17.5-alpine
+    restart: always
+    volumes:
+      - ~/public_html:/public_html
+      - ./conf.d:/etc/nginx/conf.d/
+      - ./dhparam:/etc/nginx/dhparam
+      - ~/certbot/conf/:/etc/nginx/ssl/
+      - ~/certbot/data:/usr/share/nginx/html/letsencrypt
+      - ~/resources/images/:/public_html/assets/img2/
+    ports:
+      - 80:80
+      - 443:443
+
+  certbot:
+    image: certbot/certbot:latest
+    command: certonly --webroot --webroot-path=/usr/share/nginx/html/letsencrypt --email info@enforge.io --agree-tos --no-eff-email -d develop.enforge.io
+    volumes:
+      - ~/certbot/conf/:/etc/letsencrypt
+      - ~/certbot/logs/:/var/log/letsencrypt
+      - ~/certbot/data:/usr/share/nginx/html/letsencrypt
+
+#  ui:
+#    build:
+#      context: ../ddp-ui2
+#      dockerfile: Dockerfile
+#    volumes:
+#      - ~/resources/images/:/usr/share/nginx/html/assets/img2/
+#      - ~/ddp-api/public_html:/usr/src/app/dist
+#    depends_on:
+#      - api
+
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000
+    volumes:
+      - ~/resources/images/:/usr/src/java-app/resources/images/
+      - ~/resources/designs/:/usr/src/java-app/resources/designs/
+    depends_on:
+      - mongo
+
+  design:
+    build:
+      context: ../dpp_designgen
+      dockerfile: flask_rest_api_v3/Dockerfile.design
+    ports:
+      - 5000:5000
+
+  admin:
+    build:
+      context: ../admin_panel
+      dockerfile: Dockerfile
+    ports:
+      - 4000:80
+    depends_on:
+      - api

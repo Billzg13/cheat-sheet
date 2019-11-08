@@ -1,0 +1,40 @@
+image: docker:latest
+
+stages:
+- build
+- deploy_develop
+- deploy_master
+
+build:
+  image: maven:3.5.4-jdk-8-slim
+  stage: build
+  script: "mvn package"
+  artifacts:
+    paths:
+    - target/*.jar
+
+deploy_develop:
+  only:
+  - develop
+  stage: deploy_develop
+  script:
+  - ls
+  - apk update
+  - apk add --update openssh-client git
+  - chmod +x ./deploy/disableHostKeyChecking.sh
+  - chmod +x ./deploy/updateAndRestart.sh
+  - chmod +x deploy/deploy.sh
+  - sh deploy/deploy.sh
+
+deploy_master:
+  only:
+    - master
+  stage: deploy_master
+  script:
+    - ls
+    - apk update
+    - apk add --update openssh-client git
+    - chmod +x ./deploy/disableHostKeyChecking.sh
+    - chmod +x ./deploy/updateAndRestart.sh
+    - chmod +x deploy/deploy_prod.sh
+    - sh deploy/deploy_prod.sh
